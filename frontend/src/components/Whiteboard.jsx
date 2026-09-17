@@ -9,21 +9,25 @@ const BACKEND_URL = import.meta.env.MODE === 'development'
 
 const socket = io(BACKEND_URL);
 
-const Whiteboard = () => {
+// Accept roomId as a prop from the Dashboard/App router
+const Whiteboard = ({ roomId }) => {
   const canvasRef = useRef(null);
   const fabricRef = useRef(null);
   
-  // Refs for tracking drawing states and temporary lines
   const activeStreamsRef = useRef({});
   const isDrawingRef = useRef(false);
 
-  // THESE WERE MISSING: State variables for the toolbar and live cursors
   const [color, setColor] = useState('#000000');
   const [brushWidth, setBrushWidth] = useState(5);
   const [cursors, setCursors] = useState({});
 
   useEffect(() => {
     if (fabricRef.current) return;
+
+    // Join the specific room as soon as the component loads
+    if (roomId) {
+      socket.emit('join-room', roomId);
+    }
 
     const CANVAS_WIDTH = 2000;
     const CANVAS_HEIGHT = 1500;
@@ -47,8 +51,11 @@ const Whiteboard = () => {
     canvas.on('mouse:up', () => { isDrawingRef.current = false; });
 
     canvas.on('mouse:move', (options) => {
-      const pointer = canvas.getPointer(options.e);
+      // FIX: Fabric.js v6 uses options.scenePoint instead of canvas.getPointer()
+      const pointer = options.scenePoint || options.pointer || { x: 0, y: 0 };
+      
       socket.emit('cursor-move', { 
+        roomId, // Attach the room ID
         x: pointer.x, 
         y: pointer.y, 
         color: color,
@@ -59,7 +66,7 @@ const Whiteboard = () => {
 
     canvas.on('path:created', (e) => {
       const pathData = e.path.toObject();
-      socket.emit('canvas-data', pathData);
+      socket.emit('canvas-data', { roomId, pathData }); // Attach the room ID
     });
 
     // --- REMOTE DRAWING RECEIVERS ---
@@ -69,7 +76,6 @@ const Whiteboard = () => {
       setCursors((prevCursors) => {
         const prevCursor = prevCursors[id];
 
-        // Draw temporary streaming lines if they are dragging their mouse
         if (isDrawing && prevCursor && prevCursor.isDrawing) {
           const line = new fabric.Line([prevCursor.x, prevCursor.y, x, y], {
             stroke: remoteColor,
@@ -96,7 +102,6 @@ const Whiteboard = () => {
     });
 
     socket.on('canvas-data', (payload) => {
-      // Bulletproof parsing for both new and old payload formats
       const pathObject = payload.pathData ? payload.pathData : payload;
       const senderId = payload.senderId || 'unknown';
       
@@ -105,7 +110,6 @@ const Whiteboard = () => {
       fabric.Path.fromObject(pathObject).then((path) => {
         canvas.add(path);
 
-        // Delete temporary streaming lines once the final stroke arrives
         if (activeStreamsRef.current[senderId]) {
           activeStreamsRef.current[senderId].forEach(line => canvas.remove(line));
           delete activeStreamsRef.current[senderId];
@@ -129,7 +133,6 @@ const Whiteboard = () => {
         return updatedCursors;
       });
 
-      // Cleanup abandoned lines if someone drops connection mid-stroke
       if (activeStreamsRef.current[id]) {
         activeStreamsRef.current[id].forEach(line => canvas.remove(line));
         delete activeStreamsRef.current[id];
@@ -145,10 +148,9 @@ const Whiteboard = () => {
       canvas.dispose();
       fabricRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); 
+    // Re-run effect if roomId changes so we join the new room
+  }, [roomId]); 
 
-  // Update Brush Settings when toolbar changes
   useEffect(() => {
     if (fabricRef.current && fabricRef.current.freeDrawingBrush) {
       fabricRef.current.freeDrawingBrush.color = color;
@@ -161,7 +163,7 @@ const Whiteboard = () => {
       fabricRef.current.clear();
       fabricRef.current.backgroundColor = '#ffffff';
       fabricRef.current.renderAll();
-      socket.emit('clear-canvas'); 
+      socket.emit('clear-canvas', roomId); // Attach the room ID
     }
   };
 

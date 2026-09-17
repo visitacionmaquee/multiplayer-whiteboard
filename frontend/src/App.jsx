@@ -1,9 +1,10 @@
 // frontend/src/App.jsx
 import { useEffect, useState } from 'react';
-import { HashRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom';
 import Whiteboard from './components/Whiteboard';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Dashboard from './pages/Dashboard'; // 1. Import the Dashboard
 
 const BACKEND_URL = import.meta.env.MODE === 'development' 
   ? 'http://localhost:3001' 
@@ -18,16 +19,11 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
-// Whiteboard Wrapper with Logout Button
+// Whiteboard Wrapper with Dynamic Room ID
 const WhiteboardLayout = ({ serverMessage }) => {
   const navigate = useNavigate();
+  const { roomId } = useParams(); // 2. Extract roomId from the URL
   const userName = localStorage.getItem('userName') || 'User';
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('userName');
-    navigate('/login');
-  };
 
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', margin: 0, padding: 0, overflow: 'hidden' }}>
@@ -42,11 +38,26 @@ const WhiteboardLayout = ({ serverMessage }) => {
         gap: '10px'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <h1 style={{ margin: 0, fontSize: '1.2rem', whiteSpace: 'nowrap' }}>Multiplayer Board</h1>
-          <span style={{ fontSize: '0.85rem', color: '#9ca3af' }}>Hello, {userName}</span>
+          {/* 3. Replaced Logout with a Back to Dashboard button */}
+          <button 
+            onClick={() => navigate('/dashboard')}
+            style={{ 
+              padding: '4px 10px', 
+              backgroundColor: '#4b5563', 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: '4px', 
+              cursor: 'pointer',
+              fontSize: '0.85rem'
+            }}
+          >
+            ← Dashboard
+          </button>
+          <h1 style={{ margin: 0, fontSize: '1.2rem', whiteSpace: 'nowrap' }}>Room: {roomId}</h1>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          <span style={{ fontSize: '0.85rem', color: '#9ca3af' }}>Hello, {userName}</span>
           <span style={{ 
             fontSize: '0.85rem', 
             padding: '4px 8px',
@@ -55,27 +66,12 @@ const WhiteboardLayout = ({ serverMessage }) => {
           }}>
             {serverMessage}
           </span>
-          
-          <button 
-            onClick={handleLogout}
-            style={{
-              padding: '4px 10px',
-              backgroundColor: '#374151',
-              color: 'white',
-              border: '1px solid #4b5563',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '0.85rem',
-              fontWeight: 'bold'
-            }}
-          >
-            Logout
-          </button>
         </div>
       </div>
       
       <div style={{ flex: 1, position: 'relative' }}>
-        <Whiteboard />
+        {/* 4. Pass the roomId down to the Whiteboard component */}
+        <Whiteboard roomId={roomId} />
       </div>
     </div>
   );
@@ -94,13 +90,19 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Root path is now the Login page */}
         <Route path="/" element={<Login />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         
-        {/* Protected Whiteboard Workspace */}
-        <Route path="/board" element={
+        {/* 5. Add the new Dashboard Route */}
+        <Route path="/dashboard" element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        } />
+        
+        {/* 6. Update Board Route with :roomId parameter */}
+        <Route path="/board/:roomId" element={
           <ProtectedRoute>
             <WhiteboardLayout serverMessage={serverMessage} />
           </ProtectedRoute>

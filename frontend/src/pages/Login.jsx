@@ -34,7 +34,7 @@ const Login = () => {
       localStorage.setItem('userName', data.name);
 
       // Redirect to the protected whiteboard workspace route
-      navigate('/board');
+      navigate('/dashboard');
     } catch (err) {
       setError(err.message);
     }
