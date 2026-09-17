@@ -7,33 +7,29 @@ const Whiteboard = () => {
   const fabricRef = useRef(null);
 
   useEffect(() => {
-    // Initialize the Fabric canvas
+    // 1. Initialize the Fabric canvas with drawing mode enabled
     const canvas = new fabric.Canvas(canvasRef.current, {
-      isDrawingMode: true, // This enables freehand drawing out of the box!
+      isDrawingMode: true,
       width: window.innerWidth,
-      height: window.innerHeight - 80, // Leave some room for a header
+      height: window.innerHeight - 40, // Account for the header height
       backgroundColor: '#ffffff'
     });
 
-    // Customize the initial brush
-    const brush = new fabric.PencilBrush(canvas);
-    brush.color = '#000000';
-    brush.width = 5;
-    canvas.freeDrawingBrush = brush;
+    // We removed the custom brush color/width settings here that were causing the crash!
+    // Fabric will default to a standard black pencil brush.
 
-    // Save the canvas instance to a ref so we can access it later
     fabricRef.current = canvas;
 
-    // Handle window resizing dynamically
+    // 2. Handle window resizing dynamically
     const handleResize = () => {
       canvas.setWidth(window.innerWidth);
-      canvas.setHeight(window.innerHeight - 80);
+      canvas.setHeight(window.innerHeight - 40);
       canvas.renderAll();
     };
     
     window.addEventListener('resize', handleResize);
 
-    // Cleanup function when the component unmounts
+    // 3. Cleanup function when the component unmounts
     return () => {
       window.removeEventListener('resize', handleResize);
       canvas.dispose();
@@ -41,14 +37,9 @@ const Whiteboard = () => {
   }, []);
 
   return (
-    <div style={{ backgroundColor: '#f3f4f6', minHeight: '100vh' }}>
-      <div style={{ padding: '1rem', backgroundColor: '#1f2937', color: '#fff' }}>
-        <h2 style={{ margin: 0, fontSize: '1.2rem' }}>Board Workspace</h2>
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'center', padding: '10px' }}>
-        <div style={{ boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-          <canvas ref={canvasRef} />
-        </div>
+    <div style={{ backgroundColor: '#e5e7eb', height: 'calc(100vh - 40px)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+      <div style={{ boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
+        <canvas ref={canvasRef} />
       </div>
     </div>
   );
