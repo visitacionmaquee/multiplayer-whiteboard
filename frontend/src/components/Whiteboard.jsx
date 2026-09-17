@@ -19,7 +19,6 @@ const Whiteboard = () => {
   useEffect(() => {
     if (fabricRef.current) return;
 
-    // A slightly smaller fixed resolution prevents tablet RAM exhaustion
     const CANVAS_WIDTH = 2000;
     const CANVAS_HEIGHT = 1500;
 
@@ -81,60 +80,72 @@ const Whiteboard = () => {
   };
 
   return (
-    <div style={{ backgroundColor: '#e5e7eb', height: 'calc(100vh - 40px)', display: 'flex', flexDirection: 'column' }}>
+    // Height is 100% of the parent flex container
+    <div style={{ backgroundColor: '#e5e7eb', height: '100%', display: 'flex', flexDirection: 'column' }}>
       
-      {/* Restored Toolbar */}
+      {/* Responsive Toolbar */}
       <div style={{ 
-        padding: '10px 20px', 
+        padding: '10px 15px', 
         backgroundColor: '#ffffff', 
         display: 'flex', 
-        gap: '20px', 
+        flexWrap: 'wrap', // Allows controls to drop to the next line on mobile
+        gap: '15px', 
         alignItems: 'center',
-        borderBottom: '1px solid #d1d5db'
+        borderBottom: '1px solid #d1d5db',
+        justifyContent: 'space-between'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <label htmlFor="colorPicker" style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>Color:</label>
-          <input 
-            type="color" 
-            id="colorPicker" 
-            value={color} 
-            onChange={(e) => setColor(e.target.value)} 
-            style={{ cursor: 'pointer' }}
-          />
-        </div>
+        
+        {/* Controls Wrapper */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <label htmlFor="colorPicker" style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>Color:</label>
+            <input 
+              type="color" 
+              id="colorPicker" 
+              value={color} 
+              onChange={(e) => setColor(e.target.value)} 
+              style={{ cursor: 'pointer', padding: 0, border: 'none', width: '30px', height: '30px' }}
+            />
+          </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <label htmlFor="brushWidth" style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>Brush Size: {brushWidth}px</label>
-          <input 
-            type="range" 
-            id="brushWidth" 
-            min="1" 
-            max="50" 
-            value={brushWidth} 
-            onChange={(e) => setBrushWidth(e.target.value)} 
-            style={{ cursor: 'pointer' }}
-          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <label htmlFor="brushWidth" style={{ fontSize: '0.9rem', fontWeight: 'bold', whiteSpace: 'nowrap' }}>Size: {brushWidth}px</label>
+            <input 
+              type="range" 
+              id="brushWidth" 
+              min="1" 
+              max="50" 
+              value={brushWidth} 
+              onChange={(e) => setBrushWidth(e.target.value)} 
+              style={{ cursor: 'pointer', width: '100px' }}
+            />
+          </div>
         </div>
 
         <button 
           onClick={clearCanvas}
           style={{ 
-            marginLeft: 'auto', 
             padding: '6px 12px', 
             backgroundColor: '#ef4444', 
             color: 'white', 
             border: 'none', 
             borderRadius: '4px',
             cursor: 'pointer',
-            fontWeight: 'bold'
+            fontWeight: 'bold',
+            whiteSpace: 'nowrap'
           }}
         >
           Clear Board
         </button>
       </div>
 
-      {/* Canvas Container - Removed Box Shadow for Tablet Performance */}
-      <div style={{ flex: 1, padding: '10px', overflow: 'auto' }}>
+      {/* Viewport Wrapper with Touch Scrolling */}
+      <div style={{ 
+        flex: 1, 
+        padding: '10px', 
+        overflow: 'auto',
+        WebkitOverflowScrolling: 'touch' // Enables smooth momentum scrolling on iOS/iPadOS
+      }}>
         <div style={{ 
             width: '2000px', 
             height: '1500px',
