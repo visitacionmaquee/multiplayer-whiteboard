@@ -1,11 +1,19 @@
 // backend/server.js
+require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
 const { Server } = require('socket.io');
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const User = require('./models/User');
 
 const app = express();
 const server = http.createServer(app);
+
+// Middleware to parse JSON bodies
+app.use(express.json());
 
 const allowedOrigins = [
   'https://multiplayer-whiteboard-flame.vercel.app', 
@@ -22,14 +30,77 @@ const io = new Server(server, {
   }
 });
 
+// --- CONNECT TO MONGODB ATLAS ---
+const MONGO_URI = process.env.MONGODB_URI;
+
+mongoose.connect(MONGO_URI, { dbName: 'whiteboard_db' })
+  .then(() => console.log('Connected to MongoDB Atlas successfully!'))
+  .catch((err) => console.error('MongoDB connection error:', err));
+
+// --- AUTH API ROUTES ---
+
+// Register Route
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+    
+    // Check if user already exists in MongoDB
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ error: 'Email already in use.' });
+    }
+
+    // Hash the password securely
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Save user to MongoDB
+    const newUser = new User({ name, email, password: hashedPassword });
+    await newUser.save();
+
+    res.status(201).json({ message: 'User registered successfully!' });
+  } catch (err) {
+    console.error('Registration error:', err);
+    res.status(500).json({ error: 'Server error during registration.' });
+  }
+});
+
+// Login Route
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Find user by email in MongoDB
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ error: 'Invalid email or password.' });
+    }
+
+    // Compare password hash
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ error: 'Invalid email or password.' });
+    }
+
+    // Create JWT token valid for 1 day
+    const token = jwt.sign({ id: user._id, name: user.name }, 'YOUR_JWT_SECRET', { expiresIn: '1d' });
+
+    res.json({ token, name: user.name, email: user.email });
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(500).json({ error: 'Server error during login.' });
+  }
+});
+
+// Ping route for status bar
 app.get('/api/ping', (req, res) => {
   res.json({ message: 'Backend is live and connected!' });
 });
 
+// Real-time WebSocket connection handling
 io.on('connection', (socket) => {
   console.log(`User connected: ${socket.id}`);
 
-  // UPDATED: Attach the sender's ID so clients know whose temporary lines to delete
   socket.on('canvas-data', (pathData) => {
     socket.broadcast.emit('canvas-data', { pathData, senderId: socket.id });
   });
@@ -51,5 +122,5 @@ io.on('connection', (socket) => {
 const PORT = process.env.PORT || 3001;
 
 server.listen(PORT, () => {
-  console.log(`WebSocket Server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
