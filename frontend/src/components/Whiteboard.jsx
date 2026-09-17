@@ -21,10 +21,14 @@ const Whiteboard = () => {
   useEffect(() => {
     if (fabricRef.current) return;
 
+    // FIX: Set a fixed, massive resolution for the canvas
+    const CANVAS_WIDTH = 3000;
+    const CANVAS_HEIGHT = 2000;
+
     const canvas = new fabric.Canvas(canvasRef.current, {
       isDrawingMode: true,
-      width: window.innerWidth,
-      height: window.innerHeight - 100,
+      width: CANVAS_WIDTH,
+      height: CANVAS_HEIGHT,
       backgroundColor: '#ffffff'
     });
 
@@ -35,46 +39,33 @@ const Whiteboard = () => {
 
     fabricRef.current = canvas;
 
-    // --- MULTIPLAYER: EMIT LOCAL DRAWINGS ---
-    // Fabric's 'path:created' fires automatically when you finish a mouse stroke
     canvas.on('path:created', (e) => {
       const pathData = e.path.toObject();
       socket.emit('canvas-data', pathData);
     });
 
-    // --- MULTIPLAYER: RECEIVE REMOTE DRAWINGS ---
     socket.on('canvas-data', (data) => {
-      // Fabric v6 uses Promises to reconstruct objects from JSON
       fabric.Path.fromObject(data).then((path) => {
         canvas.add(path);
         canvas.renderAll();
       });
     });
 
-    // --- MULTIPLAYER: RECEIVE CLEAR COMMAND ---
     socket.on('clear-canvas', () => {
       canvas.clear();
       canvas.backgroundColor = '#ffffff';
       canvas.renderAll();
     });
 
-    const handleResize = () => {
-      canvas.setWidth(window.innerWidth);
-      canvas.setHeight(window.innerHeight - 100);
-      canvas.renderAll();
-    };
-    
-    window.addEventListener('resize', handleResize);
-
+    // We no longer need the window resize listener because the canvas size is fixed!
     return () => {
-      window.removeEventListener('resize', handleResize);
       socket.off('canvas-data');
       socket.off('clear-canvas');
       canvas.dispose();
       fabricRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); 
+  }, []);
 
   // 2. Update Brush Settings
   useEffect(() => {
@@ -99,59 +90,15 @@ const Whiteboard = () => {
   return (
     <div style={{ backgroundColor: '#e5e7eb', height: 'calc(100vh - 40px)', display: 'flex', flexDirection: 'column' }}>
       
-      {/* Toolbar */}
-      <div style={{ 
-        padding: '10px 20px', 
-        backgroundColor: '#ffffff', 
-        display: 'flex', 
-        gap: '20px', 
-        alignItems: 'center',
-        borderBottom: '1px solid #d1d5db'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <label htmlFor="colorPicker" style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>Color:</label>
-          <input 
-            type="color" 
-            id="colorPicker" 
-            value={color} 
-            onChange={(e) => setColor(e.target.value)} 
-            style={{ cursor: 'pointer' }}
-          />
-        </div>
+      {/* ... (Keep the Toolbar exactly the same) ... */}
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <label htmlFor="brushWidth" style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>Brush Size: {brushWidth}px</label>
-          <input 
-            type="range" 
-            id="brushWidth" 
-            min="1" 
-            max="50" 
-            value={brushWidth} 
-            onChange={(e) => setBrushWidth(e.target.value)} 
-            style={{ cursor: 'pointer' }}
-          />
-        </div>
-
-        <button 
-          onClick={clearCanvas}
-          style={{ 
-            marginLeft: 'auto', 
-            padding: '6px 12px', 
-            backgroundColor: '#ef4444', 
-            color: 'white', 
-            border: 'none', 
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontWeight: 'bold'
-          }}
-        >
-          Clear Board
-        </button>
-      </div>
-
-      {/* Canvas Container */}
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flex: 1, padding: '10px' }}>
-        <div style={{ boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
+      {/* FIX: Add overflow: 'auto' to make the massive canvas scrollable on small screens */}
+      <div style={{ flex: 1, padding: '10px', overflow: 'auto' }}>
+        <div style={{ 
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', 
+            width: '3000px', 
+            height: '2000px' 
+        }}>
           <canvas ref={canvasRef} />
         </div>
       </div>
