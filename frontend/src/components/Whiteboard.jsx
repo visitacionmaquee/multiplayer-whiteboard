@@ -1,6 +1,6 @@
 // frontend/src/components/Whiteboard.jsx
 import { useEffect, useRef } from 'react';
-import { fabric } from 'fabric';
+import * as fabric from 'fabric';
 
 const Whiteboard = () => {
   const canvasRef = useRef(null);
