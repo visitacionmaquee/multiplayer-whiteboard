@@ -16,8 +16,10 @@ const Whiteboard = () => {
     });
 
     // Customize the initial brush
-    canvas.freeDrawingBrush.color = '#000000';
-    canvas.freeDrawingBrush.width = 5;
+    const brush = new fabric.PencilBrush(canvas);
+    brush.color = '#000000';
+    brush.width = 5;
+    canvas.freeDrawingBrush = brush;
 
     // Save the canvas instance to a ref so we can access it later
     fabricRef.current = canvas;
