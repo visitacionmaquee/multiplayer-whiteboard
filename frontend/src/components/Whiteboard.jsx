@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from 'react';
 import * as fabric from 'fabric';
 import { io } from 'socket.io-client';
 
-// Automatically connect to localhost in dev, or Render in production
 const BACKEND_URL = import.meta.env.MODE === 'development' 
   ? 'http://localhost:3001' 
   : 'https://multiplayer-whiteboard-jh3d.onrender.com';
@@ -17,13 +16,12 @@ const Whiteboard = () => {
   const [color, setColor] = useState('#000000');
   const [brushWidth, setBrushWidth] = useState(5);
 
-  // 1. Initialize Canvas and Socket Listeners
   useEffect(() => {
     if (fabricRef.current) return;
 
-    // FIX: Set a fixed, massive resolution for the canvas
-    const CANVAS_WIDTH = 3000;
-    const CANVAS_HEIGHT = 2000;
+    // A slightly smaller fixed resolution prevents tablet RAM exhaustion
+    const CANVAS_WIDTH = 2000;
+    const CANVAS_HEIGHT = 1500;
 
     const canvas = new fabric.Canvas(canvasRef.current, {
       isDrawingMode: true,
@@ -57,7 +55,6 @@ const Whiteboard = () => {
       canvas.renderAll();
     });
 
-    // We no longer need the window resize listener because the canvas size is fixed!
     return () => {
       socket.off('canvas-data');
       socket.off('clear-canvas');
@@ -65,9 +62,8 @@ const Whiteboard = () => {
       fabricRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, []); 
 
-  // 2. Update Brush Settings
   useEffect(() => {
     if (fabricRef.current && fabricRef.current.freeDrawingBrush) {
       fabricRef.current.freeDrawingBrush.color = color;
@@ -75,14 +71,11 @@ const Whiteboard = () => {
     }
   }, [color, brushWidth]);
 
-  // 3. Clear Canvas Function (Updated to emit to others)
   const clearCanvas = () => {
     if (fabricRef.current) {
       fabricRef.current.clear();
       fabricRef.current.backgroundColor = '#ffffff';
       fabricRef.current.renderAll();
-      
-      // Tell everyone else to clear their boards too!
       socket.emit('clear-canvas'); 
     }
   };
@@ -90,14 +83,63 @@ const Whiteboard = () => {
   return (
     <div style={{ backgroundColor: '#e5e7eb', height: 'calc(100vh - 40px)', display: 'flex', flexDirection: 'column' }}>
       
-      {/* ... (Keep the Toolbar exactly the same) ... */}
+      {/* Restored Toolbar */}
+      <div style={{ 
+        padding: '10px 20px', 
+        backgroundColor: '#ffffff', 
+        display: 'flex', 
+        gap: '20px', 
+        alignItems: 'center',
+        borderBottom: '1px solid #d1d5db'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <label htmlFor="colorPicker" style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>Color:</label>
+          <input 
+            type="color" 
+            id="colorPicker" 
+            value={color} 
+            onChange={(e) => setColor(e.target.value)} 
+            style={{ cursor: 'pointer' }}
+          />
+        </div>
 
-      {/* FIX: Add overflow: 'auto' to make the massive canvas scrollable on small screens */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <label htmlFor="brushWidth" style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>Brush Size: {brushWidth}px</label>
+          <input 
+            type="range" 
+            id="brushWidth" 
+            min="1" 
+            max="50" 
+            value={brushWidth} 
+            onChange={(e) => setBrushWidth(e.target.value)} 
+            style={{ cursor: 'pointer' }}
+          />
+        </div>
+
+        <button 
+          onClick={clearCanvas}
+          style={{ 
+            marginLeft: 'auto', 
+            padding: '6px 12px', 
+            backgroundColor: '#ef4444', 
+            color: 'white', 
+            border: 'none', 
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontWeight: 'bold'
+          }}
+        >
+          Clear Board
+        </button>
+      </div>
+
+      {/* Canvas Container - Removed Box Shadow for Tablet Performance */}
       <div style={{ flex: 1, padding: '10px', overflow: 'auto' }}>
         <div style={{ 
-            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', 
-            width: '3000px', 
-            height: '2000px' 
+            width: '2000px', 
+            height: '1500px',
+            backgroundColor: '#ffffff',
+            border: '1px solid #ccc'
         }}>
           <canvas ref={canvasRef} />
         </div>
