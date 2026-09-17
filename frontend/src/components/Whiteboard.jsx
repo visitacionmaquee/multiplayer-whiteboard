@@ -234,27 +234,31 @@ const Whiteboard = ({ roomId }) => {
             position: 'relative' 
         }}>
           
-          {/* Render Live Cursors */}
-          {Object.entries(cursors).map(([id, cursor]) => (
-            <div
-              key={id}
-              style={{
-                position: 'absolute',
-                left: cursor.x,
-                top: cursor.y,
-                pointerEvents: 'none',
-                zIndex: 50,
-                transform: 'translate(-4px, -4px)',
-                transition: 'left 0.03s linear, top 0.03s linear'
-              }}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill={cursor.color} stroke="#ffffff" strokeWidth="2">
-                <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" />
-              </svg>
-            </div>
-          ))}
+          {/* ISOLATED FABRIC CONTAINER: React will leave this alone */}
+          <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
+            <canvas ref={canvasRef} />
+          </div>
 
-          <canvas ref={canvasRef} />
+          {/* ISOLATED REACT CURSOR CONTAINER: Fabric will leave this alone */}
+          <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 50 }}>
+            {Object.entries(cursors).map(([id, cursor]) => (
+              <div
+                key={id}
+                style={{
+                  position: 'absolute',
+                  left: cursor.x,
+                  top: cursor.y,
+                  transform: 'translate(-4px, -4px)',
+                  transition: 'left 0.03s linear, top 0.03s linear'
+                }}
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill={cursor.color} stroke="#ffffff" strokeWidth="2">
+                  <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" />
+                </svg>
+              </div>
+            ))}
+          </div>
+
         </div>
       </div>
       
