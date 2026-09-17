@@ -13,8 +13,9 @@ const Login = () => {
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
+    localStorage.setItem('token', data.token);
+    localStorage.setItem('userName', data.name);
+    navigate('/board');
 
     try {
       const response = await fetch(`${BACKEND_URL}/api/auth/login`, {
