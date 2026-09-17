@@ -13,9 +13,8 @@ const Login = () => {
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('userName', data.name);
-    navigate('/board');
+    e.preventDefault();
+    setError('');
 
     try {
       const response = await fetch(`${BACKEND_URL}/api/auth/login`, {
@@ -34,8 +33,8 @@ const Login = () => {
       localStorage.setItem('token', data.token);
       localStorage.setItem('userName', data.name);
 
-      // Redirect to the main whiteboard canvas
-      navigate('/');
+      // Redirect to the protected whiteboard workspace route
+      navigate('/board');
     } catch (err) {
       setError(err.message);
     }
