@@ -66,31 +66,33 @@ app.post('/api/auth/register', async (req, res) => {
 });
 
 // Login Route
-app.post('/api/auth/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    // Find user by email in MongoDB
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(400).json({ error: 'Invalid email or password.' });
+app.post('/api/auth/register', async (req, res) => {
+    try {
+      const { name, email, password } = req.body;
+      
+      // Check if mongoose is connected
+      if (mongoose.connection.readyState !== 1) {
+        return res.status(500).json({ error: 'Database is still connecting. Please try again in a moment.' });
+      }
+  
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        return res.status(400).json({ error: 'Email already in use.' });
+      }
+  
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+  
+      const newUser = new User({ name, email, password: hashedPassword });
+      await newUser.save();
+  
+      res.status(201).json({ message: 'User registered successfully!' });
+    } catch (err) {
+      // THIS WILL PRINT THE EXACT ERROR IN YOUR RENDER/LOCAL TERMINAL
+      console.error('DETAILED REGISTRATION ERROR:', err);
+      res.status(500).json({ error: err.message || 'Server error during registration.' });
     }
-
-    // Compare password hash
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ error: 'Invalid email or password.' });
-    }
-
-    // Create JWT token valid for 1 day
-    const token = jwt.sign({ id: user._id, name: user.name }, 'YOUR_JWT_SECRET', { expiresIn: '1d' });
-
-    res.json({ token, name: user.name, email: user.email });
-  } catch (err) {
-    console.error('Login error:', err);
-    res.status(500).json({ error: 'Server error during login.' });
-  }
-});
+  });
 
 // Ping route for status bar
 app.get('/api/ping', (req, res) => {
