@@ -53,11 +53,8 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Auth routes don't need the whiteboard header */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        
-        {/* The Whiteboard route uses your main layout with the status bar */}
         <Route path="/" element={
           <MainLayout serverMessage={serverMessage}>
             <Whiteboard />
