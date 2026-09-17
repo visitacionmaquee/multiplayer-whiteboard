@@ -6,18 +6,26 @@ const Whiteboard = () => {
   const canvasRef = useRef(null);
   const fabricRef = useRef(null);
   
-  // State for our drawing tools
   const [color, setColor] = useState('#000000');
   const [brushWidth, setBrushWidth] = useState(5);
 
-  // 1. Initialize Canvas (Runs once)
+  // 1. Initialize Canvas (Runs exactly once)
   useEffect(() => {
+    // Prevent React Strict Mode from double-mounting the canvas
+    if (fabricRef.current) return;
+
     const canvas = new fabric.Canvas(canvasRef.current, {
       isDrawingMode: true,
       width: window.innerWidth,
-      height: window.innerHeight - 100, // Adjusted for header + toolbar
+      height: window.innerHeight - 100,
       backgroundColor: '#ffffff'
     });
+
+    // Explicitly create and assign the brush so Fabric has a tool to draw with
+    const brush = new fabric.PencilBrush(canvas);
+    brush.color = color;
+    brush.width = parseInt(brushWidth, 10);
+    canvas.freeDrawingBrush = brush;
 
     fabricRef.current = canvas;
 
@@ -32,10 +40,12 @@ const Whiteboard = () => {
     return () => {
       window.removeEventListener('resize', handleResize);
       canvas.dispose();
+      fabricRef.current = null; // Clean up the ref on unmount
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); 
 
-  // 2. Update Brush Settings when state changes
+  // 2. Update Brush Settings when the toolbar changes
   useEffect(() => {
     if (fabricRef.current && fabricRef.current.freeDrawingBrush) {
       fabricRef.current.freeDrawingBrush.color = color;
