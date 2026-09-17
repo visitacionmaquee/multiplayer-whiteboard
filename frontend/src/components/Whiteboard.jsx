@@ -1,6 +1,14 @@
 // frontend/src/components/Whiteboard.jsx
 import { useEffect, useRef, useState } from 'react';
 import * as fabric from 'fabric';
+import { io } from 'socket.io-client';
+
+// Automatically connect to localhost in dev, or Render in production
+const BACKEND_URL = import.meta.env.MODE === 'development' 
+  ? 'http://localhost:3001' 
+  : 'https://multiplayer-whiteboard-jh3d.onrender.com';
+
+const socket = io(BACKEND_URL);
 
 const Whiteboard = () => {
   const canvasRef = useRef(null);
@@ -9,9 +17,8 @@ const Whiteboard = () => {
   const [color, setColor] = useState('#000000');
   const [brushWidth, setBrushWidth] = useState(5);
 
-  // 1. Initialize Canvas (Runs exactly once)
+  // 1. Initialize Canvas and Socket Listeners
   useEffect(() => {
-    // Prevent React Strict Mode from double-mounting the canvas
     if (fabricRef.current) return;
 
     const canvas = new fabric.Canvas(canvasRef.current, {
@@ -21,13 +28,35 @@ const Whiteboard = () => {
       backgroundColor: '#ffffff'
     });
 
-    // Explicitly create and assign the brush so Fabric has a tool to draw with
     const brush = new fabric.PencilBrush(canvas);
     brush.color = color;
     brush.width = parseInt(brushWidth, 10);
     canvas.freeDrawingBrush = brush;
 
     fabricRef.current = canvas;
+
+    // --- MULTIPLAYER: EMIT LOCAL DRAWINGS ---
+    // Fabric's 'path:created' fires automatically when you finish a mouse stroke
+    canvas.on('path:created', (e) => {
+      const pathData = e.path.toObject();
+      socket.emit('canvas-data', pathData);
+    });
+
+    // --- MULTIPLAYER: RECEIVE REMOTE DRAWINGS ---
+    socket.on('canvas-data', (data) => {
+      // Fabric v6 uses Promises to reconstruct objects from JSON
+      fabric.Path.fromObject(data).then((path) => {
+        canvas.add(path);
+        canvas.renderAll();
+      });
+    });
+
+    // --- MULTIPLAYER: RECEIVE CLEAR COMMAND ---
+    socket.on('clear-canvas', () => {
+      canvas.clear();
+      canvas.backgroundColor = '#ffffff';
+      canvas.renderAll();
+    });
 
     const handleResize = () => {
       canvas.setWidth(window.innerWidth);
@@ -39,13 +68,15 @@ const Whiteboard = () => {
 
     return () => {
       window.removeEventListener('resize', handleResize);
+      socket.off('canvas-data');
+      socket.off('clear-canvas');
       canvas.dispose();
-      fabricRef.current = null; // Clean up the ref on unmount
+      fabricRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); 
 
-  // 2. Update Brush Settings when the toolbar changes
+  // 2. Update Brush Settings
   useEffect(() => {
     if (fabricRef.current && fabricRef.current.freeDrawingBrush) {
       fabricRef.current.freeDrawingBrush.color = color;
@@ -53,12 +84,15 @@ const Whiteboard = () => {
     }
   }, [color, brushWidth]);
 
-  // 3. Clear Canvas Function
+  // 3. Clear Canvas Function (Updated to emit to others)
   const clearCanvas = () => {
     if (fabricRef.current) {
       fabricRef.current.clear();
       fabricRef.current.backgroundColor = '#ffffff';
       fabricRef.current.renderAll();
+      
+      // Tell everyone else to clear their boards too!
+      socket.emit('clear-canvas'); 
     }
   };
 

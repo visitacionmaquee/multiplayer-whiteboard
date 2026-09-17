@@ -2,11 +2,16 @@
 import { useEffect, useState } from 'react';
 import Whiteboard from './components/Whiteboard';
 
+// Automatically ping localhost in dev, or Render in production
+const BACKEND_URL = import.meta.env.MODE === 'development' 
+  ? 'http://localhost:3001' 
+  : 'https://multiplayer-whiteboard-jh3d.onrender.com';
+
 function App() {
   const [serverMessage, setServerMessage] = useState('Connecting to backend...');
 
   useEffect(() => {
-    fetch('https://multiplayer-whiteboard-jh3d.onrender.com/api/ping')
+    fetch(`${BACKEND_URL}/api/ping`)
       .then(response => response.json())
       .then(data => setServerMessage(data.message))
       .catch(error => setServerMessage('Backend connection failed.'));
