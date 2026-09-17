@@ -6,7 +6,7 @@ function App() {
 
   useEffect(() => {
     // We will change this URL to your live Render URL after deployment
-    fetch('https://multiplayer-whiteboard-jh3d.onrender.com/api/ping')
+    fetch('https://multiplayer-whiteboard-jh3d.onrender.com')
       .then(response => response.json())
       .then(data => setServerMessage(data.message))
       .catch(error => setServerMessage('Backend connection failed.'));
