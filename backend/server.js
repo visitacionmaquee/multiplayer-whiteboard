@@ -7,7 +7,7 @@ const PORT = process.env.PORT || 3001;
 
 // Allow the frontend to communicate with the backend
 app.use(cors({
-  origin: 'https://multiplayer-whiteboard-git-main-maquee1.vercel.app/' // We will lock this down to your Vercel URL later
+  origin: 'https://multiplayer-whiteboard-git-main-maquee1.vercel.app' // We will lock this down to your Vercel URL later
 }));
 
 app.get('/api/ping', (req, res) => {
