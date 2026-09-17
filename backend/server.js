@@ -65,32 +65,49 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-// Login Route
-app.post('/api/auth/register', async (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
     try {
-      const { name, email, password } = req.body;
+      const { email, password } = req.body;
       
       // Check if mongoose is connected
       if (mongoose.connection.readyState !== 1) {
         return res.status(500).json({ error: 'Database is still connecting. Please try again in a moment.' });
       }
   
-      const existingUser = await User.findOne({ email });
-      if (existingUser) {
-        return res.status(400).json({ error: 'Email already in use.' });
+      // 1. Check if user exists
+      const user = await User.findOne({ email });
+      if (!user) {
+        return res.status(400).json({ error: 'Invalid email or password.' });
       }
   
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(password, salt);
+      // 2. Compare provided password with hashed password in DB
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        return res.status(400).json({ error: 'Invalid email or password.' });
+      }
   
-      const newUser = new User({ name, email, password: hashedPassword });
-      await newUser.save();
+      // 3. Generate a JWT token
+      // Make sure to add JWT_SECRET to your .env file
+      const token = jwt.sign(
+        { userId: user._id }, 
+        process.env.JWT_SECRET || 'fallback_secret_key', 
+        { expiresIn: '1d' }
+      );
   
-      res.status(201).json({ message: 'User registered successfully!' });
+      // 4. Send token and user data to the client
+      res.status(200).json({ 
+        message: 'Logged in successfully!',
+        token,
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email
+        }
+      });
+  
     } catch (err) {
-      // THIS WILL PRINT THE EXACT ERROR IN YOUR RENDER/LOCAL TERMINAL
-      console.error('DETAILED REGISTRATION ERROR:', err);
-      res.status(500).json({ error: err.message || 'Server error during registration.' });
+      console.error('DETAILED LOGIN ERROR:', err);
+      res.status(500).json({ error: err.message || 'Server error during login.' });
     }
   });
 
