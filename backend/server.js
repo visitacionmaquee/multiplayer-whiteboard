@@ -118,25 +118,37 @@ app.get('/api/ping', (req, res) => {
 
 // Real-time WebSocket connection handling
 io.on('connection', (socket) => {
-  console.log(`User connected: ${socket.id}`);
-
-  socket.on('canvas-data', (pathData) => {
-    socket.broadcast.emit('canvas-data', { pathData, senderId: socket.id });
+    console.log(`User connected: ${socket.id}`);
+  
+    // 1. User joins a specific whiteboard room
+    socket.on('join-room', (roomId) => {
+      socket.join(roomId);
+      console.log(`User ${socket.id} joined room: ${roomId}`);
+    });
+  
+    // 2. Broadcast drawing data ONLY to users in that specific room
+    socket.on('canvas-data', (data) => {
+      // Expecting data to look like { roomId, pathData, senderId }
+      socket.to(data.roomId).emit('canvas-data', { pathData: data.pathData, senderId: socket.id });
+    });
+  
+    // 3. Clear canvas ONLY for the specific room
+    socket.on('clear-canvas', (roomId) => {
+      socket.to(roomId).emit('clear-canvas');
+    });
+  
+    // 4. Broadcast cursor movements ONLY to the specific room
+    socket.on('cursor-move', (data) => {
+      // Expecting data to look like { roomId, x, y, userName }
+      socket.to(data.roomId).emit('cursor-move', { ...data, id: socket.id });
+    });
+  
+    socket.on('disconnect', () => {
+      console.log(`User disconnected: ${socket.id}`);
+      // Socket.io automatically handles removing the user from all rooms they were in
+      socket.broadcast.emit('user-disconnected', socket.id);
+    });
   });
-
-  socket.on('clear-canvas', () => {
-    socket.broadcast.emit('clear-canvas');
-  });
-
-  socket.on('cursor-move', (cursorData) => {
-    socket.broadcast.emit('cursor-move', { ...cursorData, id: socket.id });
-  });
-
-  socket.on('disconnect', () => {
-    console.log(`User disconnected: ${socket.id}`);
-    socket.broadcast.emit('user-disconnected', socket.id);
-  });
-});
 
 const PORT = process.env.PORT || 3001;
 
